@@ -35,22 +35,18 @@ default_settings = dict(
     DEBUG=DEBUG,
     PROFILE=PROFILE,
     LOG_LEVEL=LOG_LEVEL,
+    domain=r"mydomain",  # network domain for account to login to email server.
+    email_domain=r"@mydomain.org",  # mail domain with @ for account to login to smtp server.
 )
 
 if PROFILE == 'DEV':
     profile_settings = dict(
-        username=r"domain\username",  # domain username (local network)
-        password=r"Password123",  # domain password (local network)
-        server=r"mail.domain.org",  # address smtp server
-        email=r"username@mail.domain.org",  # the email address associated with the smtp server
+        log_to_file=False,
     )
 
 if PROFILE == 'PROD':
     profile_settings = dict(
-        username=r"domain\username",  # domain username (local network)
-        password=r"Password123",  # domain password (local network)
-        server=r"mail.domain.org",  # address smtp server
-        email=r"username@mail.domain.org",  # the email address associated with the smtp server
+        log_to_file=False,
     )
 
 # Combining default settings and specific profile settings
