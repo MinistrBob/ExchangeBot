@@ -1,88 +1,69 @@
 import asyncio
-import sqlite3
-from multiprocessing import Process  # Import Process from multiprocessing
+import logging
 
 from aiogram import Bot, Dispatcher, types
-from exchangelib import DELEGATE, Credentials, Account
+from exchangelib import Credentials, Account, DELEGATE, HTMLBody
+from telebot.utils.commands import set_commands
 
-import custom_logger
-from settings import app_settings
+from settings import app_settings as appset
 
 # Settings
 print("Starting to set up the application...")
-appset = app_settings
 if appset.DEBUG:
     print(f"app settings={appset}")
 
 # Logging
 print("Starting to configure the application logging...")
-log = custom_logger.get_logger(appset)
+# Define the logging level
+if appset.DEBUG:
+    log_level = logging.DEBUG
+else:
+    log_level = logging.INFO
+logging.basicConfig(level=log_level,
+                    format='%(asctime)s|%(levelname)-5s|%(funcName)s| %(message)s',
+                    datefmt='%d.%m.%Y %I:%M:%S')
+log = logging.getLogger(__name__)
 
 # Working
 log.info("The application is running")
 
 
-
-# Replace these with your actual Microsoft Exchange Server credentials
-EXCHANGE_EMAIL = 'your_exchange_email@example.com'
-EXCHANGE_PASSWORD = 'your_exchange_password'
-EXCHANGE_SERVER = 'your_exchange_server_url'
-
-# Initialize the SQLite database for storing Exchange credentials
-conn = sqlite3.connect('exchange_credentials.db')
-cursor = conn.cursor()
-cursor.execute('CREATE TABLE IF NOT EXISTS credentials (user_id INT, email TEXT)')
-conn.commit()
-
-# Initialize the Telegram bot with your token
-TELEGRAM_BOT_TOKEN = 'your_telegram_bot_token'
-bot = Bot(token=TELEGRAM_BOT_TOKEN)
-dp = Dispatcher(bot)
+async def start_bot(bot: Bot):
+    await set_commands(bot)
+    await bot.send_message(appset.telegram_admin_id, 'Bot started!')
 
 
-# Define the ExchangeMail procedure
-async def ExchangeMail():,
-    # Connect to the Exchange server
-    credentials = Credentials(EXCHANGE_EMAIL, EXCHANGE_PASSWORD)
-    account = Account(EXCHANGE_EMAIL, credentials=credentials, autodiscover=True, access_type=DELEGATE)
-
-    # Start monitoring for new emails
-    folder = account.inbox  # You can change this to the folder you want to monitor
-    async for item in folder.filter(is_read=False):
-        # Forward the new email to Telegram chat with chat_id=7777
-        await bot.send_message(chat_id=7777, text=f"New email received:\n{item.subject}\n{item.text_body}")
+async def stop_bot(bot: Bot):
+    await bot.send_message(appset.telegram_admin_id, 'Bot stopped!')
 
 
-# Define the /start command handler
-@dp.message_handler(commands=['start'])
-async def start(message: types.Message):
-    user_id = message.from_user.id
-
-    # Check if the user's credentials are already saved
-    cursor.execute('SELECT email FROM credentials WHERE user_id = ?', (user_id,))
-    existing_email = cursor.fetchone()
-
-    if existing_email:
-        await message.answer(f'Your Exchange Server email is already saved: {existing_email[0]}')
-    else:
-        await message.answer('Please enter your Exchange Server email:')
-
-        # Register a handler to collect the email from the user
-        @dp.message_handler(lambda message: message.from_user.id == user_id)
-        async def save_exchange_email(message: types.Message):
-            email_input = message.text.strip()
-            cursor.execute('INSERT INTO credentials (user_id, email) VALUES (?, ?)', (user_id, email_input))
-            conn.commit()
-            await message.answer(f'Your Exchange Server email ({email_input}) has been saved.')
-
-        # Remove the temporary handler after the email is collected
-        dp.remove_handler(save_exchange_email)
+async def start_telegram_bot():
+    log.info("Starting the Telegram bot...")
+    log.debug(f"Starting the Telegram bot {appset.telegram_bot_token}")
+    bot = Bot(token=appset.telegram_bot_token, parse_mode='HTML')
+    dp = Dispatcher()
+    dp.startup.register(start_bot)
+    dp.shutdown.register(stop_bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await bot.session.close()
 
 
 if __name__ == '__main__':
-    exchange_process = Process(target=lambda: asyncio.run(ExchangeMail()))
-    exchange_process.start()
+    asyncio.run(start_telegram_bot())
 
-    from aiogram import executor
+    credentials = Credentials(username=appset.user_login, password=appset.user_password)
+    config = Configuration(server=appset.smtp_server, credentials=credentials, auth_type=NTLM)
+    account = Account(exchange_email, config=config, autodiscover=False, access_type=DELEGATE)
 
-    executor.start_polling(dp, skip_updates=True)
+    folder = account.inbox
+
+    while True:  # Infinite loop
+        for item in folder.filter(is_read=False):  # You may need to adjust the filter criteria
+            # Forward the email to Telegram
+            forward_to_telegram(item.subject, item.body, TELEGRAM_CHAT_ID)
+            item.is_read = True  # Mark the email as read
+            item.save()
+        # Sleep for a short interval to avoid continuous checking
+        time.sleep(60)  # Sleep for 60 seconds, adjust as needed

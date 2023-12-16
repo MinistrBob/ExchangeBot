@@ -10,3 +10,4 @@ backup.cmd
 exclude.txt
 settings.py
 stuff/**
+exchangebot.db
