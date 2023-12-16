@@ -50,14 +50,7 @@ async def start_telegram_bot():
         await bot.session.close()
 
 
-if __name__ == '__main__':
-    asyncio.run(start_telegram_bot())
-
-    log.info("Connecting to Exchange...")
-    credentials = Credentials(username=appset.user_login, password=appset.user_password)
-    config = Configuration(server=appset.smtp_server, credentials=credentials, auth_type=NTLM)
-    account = Account(exchange_email, config=config, autodiscover=False, access_type=DELEGATE)
-
+async def check_exchange_emails(account):
     folder = account.inbox
 
     while True:  # Infinite loop
@@ -70,3 +63,18 @@ if __name__ == '__main__':
             item.save()
         # Sleep for a short interval to avoid continuous checking
         time.sleep(60)  # Sleep for 60 seconds, adjust as needed
+
+
+if __name__ == '__main__':
+    log.info("Connecting to Exchange...")
+    credentials = Credentials(username=appset.user_login, password=appset.user_password)
+    config = Configuration(server=appset.smtp_server, credentials=credentials, auth_type=NTLM)
+    account = Account(exchange_email, config=config, autodiscover=False, access_type=DELEGATE)
+    # asyncio.run(start_telegram_bot())
+    telegram_bot_task = asyncio.create_task(start_telegram_bot())
+    exchange_task = asyncio.create_task(check_exchange_emails(account))
+
+    try:
+        asyncio.run(asyncio.gather(telegram_bot_task, exchange_task))
+    finally:
+        log.info("Closing the application...")
