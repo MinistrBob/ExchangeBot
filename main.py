@@ -53,6 +53,7 @@ async def start_telegram_bot():
 if __name__ == '__main__':
     asyncio.run(start_telegram_bot())
 
+    log.info("Connecting to Exchange...")
     credentials = Credentials(username=appset.user_login, password=appset.user_password)
     config = Configuration(server=appset.smtp_server, credentials=credentials, auth_type=NTLM)
     account = Account(exchange_email, config=config, autodiscover=False, access_type=DELEGATE)
@@ -60,9 +61,11 @@ if __name__ == '__main__':
     folder = account.inbox
 
     while True:  # Infinite loop
+        log.debug("Checking for new emails...")
         for item in folder.filter(is_read=False):  # You may need to adjust the filter criteria
+            log.info(f"New Email:\n\nSubject: {item.subject}")
             # Forward the email to Telegram
-            forward_to_telegram(item.subject, item.body, TELEGRAM_CHAT_ID)
+            bot.send_message(appset.telegram_admin_id, f"New Email:\n\nSubject: {item.subject}\n\nBody: {item.body}")
             item.is_read = True  # Mark the email as read
             item.save()
         # Sleep for a short interval to avoid continuous checking
