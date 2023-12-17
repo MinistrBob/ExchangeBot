@@ -31,11 +31,11 @@ log.info("The application is running")
 
 async def start_bot(bot: Bot):
     await set_commands(bot)
-    await bot.send_message(appset.telegram_admin_id, 'Bot started!')
+    await bot.send_message(appset.telegram_chat_id, 'Bot started!')
 
 
 async def stop_bot(bot: Bot):
-    await bot.send_message(appset.telegram_admin_id, 'Bot stopped!')
+    await bot.send_message(appset.telegram_chat_id, 'Bot stopped!')
 
 
 async def start_telegram_bot(dp, bot):
@@ -54,7 +54,7 @@ async def check_exchange_emails(account, bot):
             log.info(f"NEW EMAIL:\nSubject: {item.subject}")
             log.debug(f"DEBUG:\n{item.subject}\n{item.text_body}")
             # Forward the email to Telegram
-            await bot.send_message(appset.telegram_admin_id,
+            await bot.send_message(appset.telegram_chat_id,
                                    f"New Email:\nSubject: {item.subject}\nBody: {item.text_body}")
             item.is_read = True  # Mark the email as read
             item.save()
