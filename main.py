@@ -2,7 +2,7 @@ import asyncio
 import logging
 from datetime import time
 
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from exchangelib import Credentials, Account, DELEGATE, Configuration, NTLM
 from telebot.utils.commands import set_commands
 
@@ -65,7 +65,7 @@ async def check_exchange_emails(account, bot):
 async def main():
     log.info("Starting the Telegram bot...")
     log.debug(f"Starting the Telegram bot {appset.telegram_bot_token}")
-    bot = Bot(token=appset.telegram_bot_token, parse_mode='HTML')
+    bot = Bot(token=appset.telegram_bot_token, parse_mode=None)
     dp = Dispatcher()
     dp.startup.register(start_bot)
     dp.shutdown.register(stop_bot)
