@@ -2,6 +2,7 @@ import asyncio
 import logging
 from datetime import time
 
+from aiogram.utils.formatting import Text, Bold
 from aiogram import Bot, Dispatcher
 from exchangelib import Credentials, Account, DELEGATE, Configuration, NTLM
 from telebot.utils.commands import set_commands
@@ -54,8 +55,20 @@ async def check_exchange_emails(account, bot):
             log.info(f"NEW EMAIL:\nSubject: {item.subject}")
             log.debug(f"DEBUG:\n{item.subject}\n{item.text_body}")
             # Forward the email to Telegram
+            if item.sender.email_address == item.sender.name:
+                from_text = f"{item.sender.email_address}\n"
+            else:
+                from_text = f"{item.sender.email_address} [{item.sender.name}]\n"
+            content = Text(
+                Bold("From:\n"),
+                from_text,
+                Bold("Subject:\n"),
+                f"{item.subject}\n",
+                f"{'-'*40}\n\n",
+                f"{item.text_body}"
+            )
             await bot.send_message(appset.telegram_chat_id,
-                                   f"New Email:\nSubject: {item.subject}\nBody: {item.text_body}")
+                                   **content.as_kwargs())
             item.is_read = True  # Mark the email as read
             item.save()
         # Sleep for a short interval to avoid continuous checking
