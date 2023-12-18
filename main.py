@@ -31,7 +31,7 @@ log.info("The application is running")
 
 
 async def start_bot(bot: Bot):
-    await set_commands(bot)
+    # await set_commands(bot)
     await bot.send_message(appset.telegram_chat_id, 'Bot started!')
 
 
