@@ -1,46 +1,103 @@
-import settings
-from exchangelib import Credentials, Account, Configuration, NTLM, DELEGATE
+import asyncio
+import logging
+from datetime import time
 
-credentials = Credentials(username=settings.username, password=settings.password)
-config = Configuration(server=settings.server,
-                       credentials=credentials,
-                       auth_type=NTLM)
-account = Account(settings.email,
-                  config=config,
-                  autodiscover=False,
-                  access_type=DELEGATE)
+from aiogram.utils.formatting import Text, Bold
+from aiogram import Bot, Dispatcher
+from exchangelib import Credentials, Account, DELEGATE, Configuration, NTLM
+from telebot.utils.commands import set_commands
 
-# for item in account.inbox.all().order_by('-datetime_received')[:100]:
-#     # print(item.subject, item.sender, item.datetime_received)
-#     print(dir(item))
+from settings import app_settings as appset
 
-"""Одно письмо из папки account.inbox ['ELEMENT_NAME', 'FIELDS', 'ID_ELEMENT_CLS', 'INSERT_AFTER_FIELD', 'NAMESPACE', 
-'___id', '__attachments', '__author', '__bcc_recipients', '__body', '__categories', '__cc_recipients', '__class__', 
-'__conversation_id', '__conversation_index', '__conversation_topic', '__culture', '__datetime_created', 
-'__datetime_received', '__datetime_sent', '__delattr__', '__dict__', '__dir__', '__display_cc', '__display_to', 
-'__doc__', '__effective_rights', '__eq__', '__format__', '__ge__', '__getattribute__', '__gt__', '__has_attachments', 
-'__hash__', '__headers', '__importance', '__in_reply_to', '__init__', '__init_subclass__', '__is_associated', 
-'__is_delivery_receipt_requested', '__is_draft', '__is_from_me', '__is_read', '__is_read_receipt_requested', 
-'__is_resend', '__is_response_requested', '__is_submitted', '__is_unmodified', '__item_class', 
-'__last_modified_name', '__last_modified_time', '__le__', '__lt__', '__message_id', '__mime_content', '__module__', 
-'__ne__', '__new__', '__parent_folder_id', '__received_by', '__received_representing', '__reduce__', '__reduce_ex__', 
-'__references', '__reminder_due_by', '__reminder_is_set', '__reminder_message_data', 
-'__reminder_minutes_before_start', '__reply_to', '__repr__', '__response_objects', '__sender', '__sensitivity', 
-'__setattr__', '__size', '__sizeof__', '__slots__', '__str__', '__subclasshook__', '__subject', '__text_body', 
-'__to_recipients', '__unique_body', '__web_client_edit_form_query_string', '__web_client_read_form_query_string', 
-'_clear', '_create', '_delete', '_field_vals', '_fields_lock', '_id', '_slots_keys', '_update', '_update_fieldnames', 
-'account', 'add_field', 'archive', 'attach', 'attachments', 'attribute_fields', 'author', 'bcc_recipients', 'body', 
-'categories', 'cc_recipients', 'changekey', 'clean', 'conversation_id', 'conversation_index', 'conversation_topic', 
-'copy', 'create_forward', 'create_reply', 'create_reply_all', 'culture', 'datetime_created', 'datetime_received', 
-'datetime_sent', 'delete', 'deregister', 'detach', 'display_cc', 'display_to', 'effective_rights', 'folder', 
-'forward', 'from_xml', 'get_field_by_fieldname', 'has_attachments', 'headers', 'id', 'id_from_xml', 'importance', 
-'in_reply_to', 'is_associated', 'is_delivery_receipt_requested', 'is_draft', 'is_from_me', 'is_read', 
-'is_read_receipt_requested', 'is_resend', 'is_response_requested', 'is_submitted', 'is_unmodified', 'item_class', 
-'last_modified_name', 'last_modified_time', 'mark_as_junk', 'message_id', 'mime_content', 'move', 'move_to_trash', 
-'parent_folder_id', 'received_by', 'received_representing', 'references', 'refresh', 'register', 'reminder_due_by', 
-'reminder_is_set', 'reminder_message_data', 'reminder_minutes_before_start', 'remove_field', 'reply', 'reply_all', 
-'reply_to', 'request_tag', 'response_objects', 'response_tag', 'save', 'send', 'send_and_save', 'sender', 
-'sensitivity', 'size', 'soft_delete', 'subject', 'supported_fields', 'text_body', 'to_id', 'to_recipients', 'to_xml', 
-'unique_body', 'validate_field', 'web_client_edit_form_query_string', 'web_client_read_form_query_string']"""
+# Settings
+print("Starting to set up the application...")
+if appset.DEBUG:
+    print(f"app settings={appset}")
 
-print(account.root.tree())
+# Logging
+print("Starting to configure the application logging...")
+# Define the logging level
+if appset.DEBUG:
+    log_level = logging.DEBUG
+else:
+    log_level = logging.INFO
+logging.basicConfig(level=log_level,
+                    format='%(asctime)s|%(levelname)-5s|%(funcName)s| %(message)s',
+                    datefmt='%d.%m.%Y %I:%M:%S')
+log = logging.getLogger(__name__)
+
+# Working
+log.info("The application is running")
+
+
+async def start_bot(bot: Bot):
+    await set_commands(bot)
+    await bot.send_message(appset.telegram_chat_id, 'Bot started!')
+
+
+async def stop_bot(bot: Bot):
+    await bot.send_message(appset.telegram_chat_id, 'Bot stopped!')
+
+
+async def start_telegram_bot(dp, bot):
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await bot.session.close()
+
+
+async def check_exchange_emails(account, bot):
+    folder = account.inbox
+
+    while True:  # Infinite loop
+        log.debug("Checking for new emails...")
+        for item in folder.filter(is_read=False):  # You may need to adjust the filter criteria
+            log.info(f"NEW EMAIL:\nSubject: {item.subject}")
+            log.debug(f"DEBUG:\n{item.subject}\n{item.text_body}")
+            # Forward the email to Telegram
+            if item.sender.email_address == item.sender.name:
+                from_text = f"{item.sender.email_address}\n"
+            else:
+                from_text = f"{item.sender.email_address} [{item.sender.name}]\n"
+            content = Text(
+                Bold("From:\n"),
+                from_text,
+                Bold("Subject:\n"),
+                f"{item.subject}\n",
+                f"{'-'*40}\n\n",
+                f"{item.text_body}"
+            )
+            await bot.send_message(appset.telegram_chat_id,
+                                   **content.as_kwargs())
+            item.is_read = True  # Mark the email as read
+            item.save()
+        # Sleep for a short interval to avoid continuous checking
+        await asyncio.sleep(60)  # Sleep for 60 seconds, adjust as needed
+
+
+async def main():
+    log.info("Starting the Telegram bot...")
+    log.debug(f"Starting the Telegram bot {appset.telegram_bot_token}")
+    bot = Bot(token=appset.telegram_bot_token, parse_mode=None)
+    dp = Dispatcher()
+    dp.startup.register(start_bot)
+    dp.shutdown.register(stop_bot)
+
+    log.info("Connecting to Exchange...")
+    credentials = Credentials(username=appset.user_login, password=appset.user_password)
+    config = Configuration(server=appset.smtp_server, credentials=credentials, auth_type=NTLM)
+    account = Account(appset.user_email, config=config, autodiscover=False, access_type=DELEGATE)
+
+    log.info("Create async tasks...")
+    # asyncio.run(start_telegram_bot())
+    telegram_bot_task = asyncio.create_task(start_telegram_bot(dp, bot))
+    exchange_task = asyncio.create_task(check_exchange_emails(account, bot))
+
+    log.info("Run async tasks...")
+    await asyncio.gather(telegram_bot_task, exchange_task)
+
+    log.info("Closing the application...")
+
+
+if __name__ == '__main__':
+    asyncio.run(main())

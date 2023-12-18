@@ -292,3 +292,5 @@ $RECYCLE.BIN/
 # MY FILES
 settings.py
 stuff/**
+exchangebot.db
+test*.py

@@ -35,27 +35,30 @@ default_settings = dict(
     DEBUG=DEBUG,
     PROFILE=PROFILE,
     LOG_LEVEL=LOG_LEVEL,
+    log_to_file=False,
+    user_login=r"domain\username",  # network domain for account to login to email server.
+    user_password=r"Password123",
+    user_email=r"username@domain.com",  # email
+    smtp_server=r"mail.domain.com",  # address smtp server
+    telegram_chat_id=112233445,  # telegram id of admin
+    telegram_bot_token="1234567890:AASGFmFlHywoo-CFGlu0EXHERDyqK_Qut7Q",  # telegram bot token
 )
 
 if PROFILE == 'DEV':
     profile_settings = dict(
-        username=r"domain\username",  # domain username (local network)
-        password=r"Password123",  # domain password (local network)
-        server=r"mail.domain.org",  # address smtp server
-        email=r"username@mail.domain.org",  # the email address associated with the smtp server
+        log_to_file=False,
     )
 
 if PROFILE == 'PROD':
     profile_settings = dict(
-        username=r"domain\username",  # domain username (local network)
-        password=r"Password123",  # domain password (local network)
-        server=r"mail.domain.org",  # address smtp server
-        email=r"username@mail.domain.org",  # the email address associated with the smtp server
+        log_to_file=False,
     )
 
 # Combining default settings and specific profile settings
 # We can use: In Python 3.5 or greater: z = {**x, **y}; In Python 3.9.0 or greater: z = x | y
 settings = {**default_settings, **profile_settings}
+
+
 # print(settings)
 
 # You can also create an instance of the class and work with it (see below)
