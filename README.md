@@ -14,7 +14,10 @@ c:\MyGit\ExchangeBot\venv\Scripts\activate.bat
 cd c:\MyGit\ExchangeBot
 python -m pip install -r c:\MyGit\ExchangeBot\requirements.txt
 ```
-### Проблема подключения к Exchange Server
+
+### Проблемы
+
+#### 1. Проблема подключения к Exchange Server
 Ошибка:  
 ```python
 exchangelib.errors.TransportError: HTTPSConnectionPool(host='mail.domain.com', port=443): Max retries exceeded with url: /EWS/Exchange.asmx (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1006)')))
@@ -32,6 +35,9 @@ print(requests.certs.where())
 ```
 Решение проблемы: Экспортировать сертификат DOMAIN.COM CA в формате Base64 и добавить его в C:\MyGit\ExchangeBot\venv\Lib\site-packages\certifi\cacert.pem.  
 
+#### 2. Проблема форматирования текста
+Exchange отдаёт текст в виде html, но Telegram не может корректно отобразить этот html, некоторые теги вызывают ошибку. Попытка использовать пакет python - sulguk тоже не помогла, т.к. в преобразованном html так же некоторые теги вызывают ошибку.
+Поэтому бот работает с `parse_mode=None`, из Exchange берётся `item.text_body` (вместо `item.body`), а само сообщение для Telegram оформлятеся с помощью конструкции `content = Text(...)`.
 
 ### Полезная документация
 - [exchangelib.items.item](https://ecederstrand.github.io/exchangelib/exchangelib/items/item.html)
