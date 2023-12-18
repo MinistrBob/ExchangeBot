@@ -1,4 +1,6 @@
 # ExchangeBot
+Telegram bot для Windows Exchange Server, который пересылает новые входящие из папки Входящее сообщения в Telegram.
+
 
 ## For developer
 ### Update requirements (on Windows)
