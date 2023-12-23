@@ -9,5 +9,11 @@ README.md
 backup.cmd
 exclude.txt
 settings.py
-stuff/**
+stuff/
 exchangebot.db
+.idea/
+LICENSE
+__pycache__/
+settings_example.py
+venv/
+test*.py

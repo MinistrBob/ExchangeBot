@@ -2,8 +2,8 @@ FROM python:3.11-slim-bullseye
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV USER_ID=7007
-ENV USER_NAME=exchangebot
+# ENV USER_ID=7007
+# ENV USER_NAME=exchangebot
 
 # Set timezone and datatime format RU
 ENV TZ=Europe/Moscow
@@ -18,8 +18,7 @@ RUN apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/* 
     && locale-gen \
     && update-locale LANG=ru_RU.UTF-8
 
-RUN groupadd -g $USER_ID $USER_NAME \
-    && useradd -u $USER_ID -g $USER_ID -m -s /usr/sbin/nologin $USER_NAME
+# RUN groupadd -g $USER_ID $USER_NAME && useradd -u $USER_ID -g $USER_ID -m -s /usr/sbin/nologin $USER_NAME
 
 WORKDIR /app
 
@@ -28,6 +27,6 @@ RUN pip3 install -r requirements.txt
 
 COPY . .
 
-USER $USER_ID:$USER_ID
+# USER $USER_ID:$USER_ID
 
 CMD ["python", "main.py"]
