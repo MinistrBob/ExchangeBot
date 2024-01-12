@@ -52,9 +52,12 @@ async def check_exchange_emails(account, bot):
     while True:  # Infinite loop
         log.debug("Checking for new emails...")
         for item in folder.filter(is_read=False):  # You may need to adjust the filter criteria
-            log.info(f"NEW EMAIL:\nSubject: {item.subject}")
+            log.info(f"=======================================================================")
+            log.info(f"ID: {item.id}")
+            log.info(f"NEW EMAIL: Subject: {item.subject}")
             log.debug(f"DEBUG:\n{item.subject}\n{item.text_body}")
             # Forward the email to Telegram
+            # В некоторых письмах наряду с email отправителя передаётся его имя.
             if item.sender.email_address == item.sender.name:
                 from_text = f"{item.sender.email_address}\n"
             else:
@@ -67,8 +70,9 @@ async def check_exchange_emails(account, bot):
                 f"{'-'*40}\n\n",
                 f"{item.text_body}"
             )
-            await bot.send_message(appset.telegram_chat_id,
-                                   **content.as_kwargs())
+            log.debug(f"DEBUG: {content}")
+            await bot.send_message(chat_id=appset.telegram_chat_id,
+                                   **content.as_kwargs(), reply_markup=get_mail_keyboard(item.id))
             item.is_read = True  # Mark the email as read
             item.save()
         # Sleep for a short interval to avoid continuous checking
@@ -78,15 +82,18 @@ async def check_exchange_emails(account, bot):
 async def main():
     log.info("Starting the Telegram bot...")
     log.debug(f"Starting the Telegram bot {appset.telegram_bot_token}")
-    bot = Bot(token=appset.telegram_bot_token, parse_mode=None)
-    dp = Dispatcher()
-    dp.startup.register(start_bot)
-    dp.shutdown.register(stop_bot)
 
     log.info("Connecting to Exchange...")
     credentials = Credentials(username=appset.user_login, password=appset.user_password)
     config = Configuration(server=appset.smtp_server, credentials=credentials, auth_type=NTLM)
     account = Account(appset.user_email, config=config, autodiscover=False, access_type=DELEGATE)
+
+    bot = Bot(token=appset.telegram_bot_token, parse_mode=None)
+    dp = Dispatcher()
+    dp.startup.register(start_bot)
+    dp.shutdown.register(stop_bot)
+    dp.callback_query.register(delete_email, F.data.startswith('id_'))
+    dp['account'] = account
 
     log.info("Create async tasks...")
     # asyncio.run(start_telegram_bot())
