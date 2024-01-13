@@ -1,7 +1,7 @@
 from aiogram import Bot, Dispatcher
 from aiogram.types import CallbackQuery
 from exchangelib import Account
-from telebot.utils.callback import EmailCallbackData
+from telebot.utils.callbackdata import EmailCallbackData
 
 
 async def delete_email(callback: CallbackQuery, account: Account, callback_data: EmailCallbackData):
