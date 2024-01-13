@@ -9,6 +9,7 @@ from telebot.utils.commands import set_commands
 from telebot.handlers.callbacks import delete_email
 from telebot.keyboards.inline_keyboards import get_mail_keyboard
 from settings import app_settings as appset
+from telebot.utils.callbackdata import EmailCallbackData
 
 # Settings
 print("Starting to set up the application...")
@@ -93,7 +94,7 @@ async def main():
     dp = Dispatcher()
     dp.startup.register(start_bot)
     dp.shutdown.register(stop_bot)
-    dp.callback_query.register(delete_email, F.data.startswith('id_'))
+    dp.callback_query.register(delete_email, EmailCallbackData.filter(F.action == 'delete'))
     dp['account'] = account
 
     log.info("Create async tasks...")
