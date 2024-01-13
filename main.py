@@ -3,10 +3,11 @@ import logging
 from datetime import time
 
 from aiogram.utils.formatting import Text, Bold
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from exchangelib import Credentials, Account, DELEGATE, Configuration, NTLM
 from telebot.utils.commands import set_commands
-
+from telebot.handlers.callbacks import delete_email
+from telebot.keyboards.inline_keyboards import get_mail_keyboard
 from settings import app_settings as appset
 
 # Settings
