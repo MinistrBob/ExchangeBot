@@ -11,6 +11,7 @@ from telebot.keyboards.inline_keyboards import get_mail_keyboard
 from settings import app_settings as appset
 from telebot.utils.callbackdata import EmailCallbackData
 
+
 # Settings
 print("Starting to set up the application...")
 if appset.DEBUG:
@@ -50,7 +51,6 @@ async def start_telegram_bot(dp, bot):
 
 async def check_exchange_emails(account, bot):
     folder = account.inbox
-
     while True:  # Infinite loop
         log.debug("Checking for new emails...")
         for item in folder.filter(is_read=False):  # You may need to adjust the filter criteria
@@ -69,12 +69,12 @@ async def check_exchange_emails(account, bot):
                 from_text,
                 Bold("Subject:\n"),
                 f"{item.subject}\n",
-                f"{'-'*40}\n\n",
+                f"{'-' * 40}\n\n",
                 f"{item.text_body}"
             )
             log.debug(f"DEBUG: {content}")
             await bot.send_message(chat_id=appset.telegram_chat_id,
-                                   **content.as_kwargs(), reply_markup=get_mail_keyboard(item.id))
+                                   **content.as_kwargs(), reply_markup=get_mail_keyboard("email_id"))
             item.is_read = True  # Mark the email as read
             item.save()
         # Sleep for a short interval to avoid continuous checking
@@ -85,11 +85,14 @@ async def main():
     log.info("Starting the Telegram bot...")
     log.debug(f"Starting the Telegram bot {appset.telegram_bot_token}")
 
+    log.info("Connecting to Sqlite...")
+
     log.info("Connecting to Exchange...")
     credentials = Credentials(username=appset.user_login, password=appset.user_password)
     config = Configuration(server=appset.smtp_server, credentials=credentials, auth_type=NTLM)
     account = Account(appset.user_email, config=config, autodiscover=False, access_type=DELEGATE)
 
+    log.info("Create Telegram Bot...")
     bot = Bot(token=appset.telegram_bot_token, parse_mode=None)
     dp = Dispatcher()
     dp.startup.register(start_bot)
