@@ -27,7 +27,7 @@ else:
 logging.basicConfig(level=log_level,
                     format='%(asctime)s|%(levelname)-5s|%(funcName)s| %(message)s',
                     datefmt='%d.%m.%Y %I:%M:%S')
-log = logging.getLogger(__name__)
+log = logging.getLogger("main")
 
 # Working
 log.info("The application is running")
