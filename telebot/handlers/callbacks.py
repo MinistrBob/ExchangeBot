@@ -12,6 +12,7 @@ async def delete_email(callback: CallbackQuery, account: Account, callback_data:
     email_id = callback_data.email_id
     log.debug(f"email_id={email_id}")
     email = account.inbox.get(id=email_id)
+    log.debug(f"email={email}; type(email)={type(email)}")
     email.move_to_trash()
     # account.inbox.delete(email_id)
     await callback.answer()
