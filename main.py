@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import db
+import traceback
 from datetime import time, datetime
 
 from aiogram.utils.formatting import Text, Bold
@@ -61,50 +62,51 @@ async def start_telegram_bot(dp, bot):
 async def check_exchange_emails(account, bot):
     folder = account.inbox
     while True:  # Infinite loop
-        TIMESTAMP = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        items = folder.all()
-        log.debug(f"Inbox processing {items.count()} emails")
-        for item in items:  # You may need to adjust the filter criteria
-            # Проверяем что такое письмо уже есть в БД
-            result = db.execute_select(f"SELECT * FROM email where email_id='{item.id}'")
-            if result:  # Если письмо уже есть в БД
+        try:
+            TIMESTAMP = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            items = folder.all()
+            log.debug(f"Inbox processing {items.count()} emails")
+            for item in items:  # You may need to adjust the filter criteria
+                # Проверяем что такое письмо уже есть в БД
+                result = db.execute_select(f"SELECT * FROM email where email_id='{item.id}'")
+                if not result:  # Если письма нет в БД
+                    log.info(f"=======================================================================")
+                    log.info(f"ID: {item.id}")
+                    log.info(f"NEW EMAIL: Subject: {item.subject}")
+                    log.debug(f"DEBUG:\n{item.subject}\n{item.text_body}")
+                    log.debug(f"DEBUG:\n{item.subject}\n{item.text_body}")
+                    # Forward the email to Telegram
+                    # В некоторых письмах наряду с email отправителя передаётся его имя.
+                    if item.sender.email_address == item.sender.name:
+                        from_text = f"{item.sender.email_address}\n"
+                    else:
+                        from_text = f"{item.sender.email_address} [{item.sender.name}]\n"
+                    content = Text(
+                        Bold("From:\n"),
+                        from_text,
+                        Bold("Subject:\n"),
+                        f"{item.subject}\n",
+                        f"{'-' * 40}\n\n",
+                        f"{item.text_body}"
+                    )
+                    # log.debug(f"DEBUG: {content}")
+                    # TODO: Сообщения длиннее 9500??? не проходят
+                    log.debug(f"LENGTH: {len(content)}")
+                    # item.is_read = True  # Mark the email as read
+                    # item.save()
+                    result = db.execute_insert(
+                        f"INSERT INTO email (email_id, created) "
+                        f"VALUES ('{item.id}', '{TIMESTAMP}') RETURNING id")
+                    if result:
+                        await bot.send_message(chat_id=appset.telegram_chat_id, **content.as_kwargs(),
+                                               reply_markup=get_mail_keyboard(f"id={str(result[0])}"))
+                # Только после отправки сообщения нужно делать update checked
                 db.execute_dml(f"update email set checked='{TIMESTAMP}' where email_id='{item.id}'")
-            else:  # Если письма нет в БД
-                log.info(f"=======================================================================")
-                log.info(f"ID: {item.id}")
-                log.info(f"NEW EMAIL: Subject: {item.subject}")
-                log.debug(f"DEBUG:\n{item.subject}\n{item.text_body}")
-                # Forward the email to Telegram
-                # В некоторых письмах наряду с email отправителя передаётся его имя.
-                if item.sender.email_address == item.sender.name:
-                    from_text = f"{item.sender.email_address}\n"
-                else:
-                    from_text = f"{item.sender.email_address} [{item.sender.name}]\n"
-                content = Text(
-                    Bold("From:\n"),
-                    from_text,
-                    Bold("Subject:\n"),
-                    f"{item.subject}\n",
-                    f"{'-' * 40}\n\n",
-                    f"{item.text_body}"
-                )
-                # log.debug(f"DEBUG: {content}")
-                # TODO: Сообщения длиннее 9500??? не проходят
-                log.debug(f"LENGTH: {len(content)}")
-                # item.is_read = True  # Mark the email as read
-                # item.save()
-                result = db.execute_insert(
-                    f"INSERT INTO email (email_id, created) "
-                    f"VALUES ('{item.id}', '{TIMESTAMP}') RETURNING id")
-                if result:
-                    await bot.send_message(chat_id=appset.telegram_chat_id, **content.as_kwargs(),
-                                           reply_markup=get_mail_keyboard(f"id={str(result[0])}"))
-                # TODO: Только после отправки сообщения нужно делать update checked
-
-
-        # Письма которые удалены из inbox нужно удалить из БД
-        db.execute_dml(f"delete from email where checked != '{TIMESTAMP}'")
-        # TODO: Для каждой итерации сделать TRY EXCEPT
+            # Письма которые удалены из inbox нужно удалить из БД
+            db.execute_dml(f"delete from email where checked != '{TIMESTAMP}'")
+        # Любая ошибка пересылается админу.
+        except Exception:
+            await bot.send_message(appset.telegram_chat_id, f'ERROR:\n{traceback.format_exc()}')
         # Sleep for a short interval to avoid continuous checking
         await asyncio.sleep(60)  # Sleep for 60 seconds, adjust as needed
 
