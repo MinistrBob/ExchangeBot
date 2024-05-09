@@ -71,29 +71,31 @@ async def check_exchange_emails(account, bot):
                 result = db.execute_select(f"SELECT * FROM email where email_id='{item.id}'")
                 if not result:  # Если письма нет в БД
                     log.info(f"=======================================================================")
+                    log.info(f"NEW EMAIL")
                     log.info(f"ID: {item.id}")
-                    log.info(f"NEW EMAIL: Subject: {item.subject}")
-                    log.debug(f"DEBUG:\n{item.subject}\n{item.text_body}")
-                    log.debug(f"DEBUG:\n{item.subject}\n{item.text_body}")
+                    log.info(f"SUBJECT: {item.subject}")
+                    # log.debug(f"TEXT:\n{item.text_body}")
                     # Forward the email to Telegram
                     # В некоторых письмах наряду с email отправителя передаётся его имя.
                     if item.sender.email_address == item.sender.name:
                         from_text = f"{item.sender.email_address}\n"
                     else:
                         from_text = f"{item.sender.email_address} [{item.sender.name}]\n"
+                    length = len(item.text_body)
+                    log.info(f"LENGTH: {length}")
+                    # Сообщения длиннее 9500 не проходят
+                    if length > 9499:
+                        text = item.text_body[0:9499]
+                    else:
+                        text = item.text_body
                     content = Text(
                         Bold("From:\n"),
                         from_text,
                         Bold("Subject:\n"),
                         f"{item.subject}\n",
                         f"{'-' * 40}\n\n",
-                        f"{item.text_body}"
+                        f"{text}"
                     )
-                    # log.debug(f"DEBUG: {content}")
-                    # TODO: Сообщения длиннее 9500??? не проходят
-                    log.debug(f"LENGTH: {len(content)}")
-                    # item.is_read = True  # Mark the email as read
-                    # item.save()
                     result = db.execute_insert(
                         f"INSERT INTO email (email_id, created) "
                         f"VALUES ('{item.id}', '{TIMESTAMP}') RETURNING id")

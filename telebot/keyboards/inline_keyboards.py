@@ -3,7 +3,7 @@ from telebot.utils.callbackdata import EmailCallbackData
 
 
 def get_mail_keyboard(email_id):
-    print(f"EMAIL_ID={email_id}")
+    # print(f"EMAIL_ID={email_id}")  # EMAIL_ID=id=5
     keyboard_builder = InlineKeyboardBuilder()
     # keyboard_builder.button(text=f"DELETE", callback_data=f"id_{email_id}")
     keyboard_builder.button(text=f"DELETE", callback_data=EmailCallbackData(action="delete", email_id=email_id).pack())
