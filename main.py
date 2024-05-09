@@ -23,6 +23,14 @@ print("Starting to configure the application logging...")
 # Define the logging level
 if appset.DEBUG:
     log_level = logging.DEBUG
+    # Отключение лишних логгеров чтобы в логе DEBUG не было лишней информации
+    # print([k for k in logging.Logger.manager.loggerDict])
+    for v in logging.Logger.manager.loggerDict.values():
+        try:
+            if v.name != 'main':
+                v.disabled = True
+        except AttributeError:  # Там есть не только логгеры но и PlaceHolder объекты.
+            pass
 else:
     log_level = logging.INFO
 logging.basicConfig(level=log_level,
@@ -54,10 +62,11 @@ async def check_exchange_emails(account, bot):
     folder = account.inbox
     while True:  # Infinite loop
         TIMESTAMP = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        log.debug("Inbox processing...")
-        for item in folder.filter(is_read=False):  # You may need to adjust the filter criteria
+        items = folder.all()
+        log.debug(f"Inbox processing {items.count()} emails")
+        for item in items:  # You may need to adjust the filter criteria
             # Проверяем что такое письмо уже есть в БД
-            result = db.cursor.execute(f"SELECT * FROM email where email_id='{item.id}'")
+            result = db.execute_select(f"SELECT * FROM email where email_id='{item.id}'")
             if result:  # Если письмо уже есть в БД
                 db.execute_dml(f"update email set checked='{TIMESTAMP}' where email_id='{item.id}'")
             else:  # Если письма нет в БД
@@ -79,18 +88,23 @@ async def check_exchange_emails(account, bot):
                     f"{'-' * 40}\n\n",
                     f"{item.text_body}"
                 )
-                log.debug(f"DEBUG: {content}")
-
+                # log.debug(f"DEBUG: {content}")
+                # TODO: Сообщения длиннее 9500??? не проходят
+                log.debug(f"LENGTH: {len(content)}")
                 # item.is_read = True  # Mark the email as read
                 # item.save()
-                result = execute_insert(
-                    f"INSERT INTO email (email_id, created, checked) "
-                    f"VALUES ('{item.id}', '{TIMESTAMP}', '{TIMESTAMP}' RETURNING id")
+                result = db.execute_insert(
+                    f"INSERT INTO email (email_id, created) "
+                    f"VALUES ('{item.id}', '{TIMESTAMP}') RETURNING id")
                 if result:
                     await bot.send_message(chat_id=appset.telegram_chat_id, **content.as_kwargs(),
                                            reply_markup=get_mail_keyboard(f"id={str(result[0])}"))
+                # TODO: Только после отправки сообщения нужно делать update checked
+
+
         # Письма которые удалены из inbox нужно удалить из БД
         db.execute_dml(f"delete from email where checked != '{TIMESTAMP}'")
+        # TODO: Для каждой итерации сделать TRY EXCEPT
         # Sleep for a short interval to avoid continuous checking
         await asyncio.sleep(60)  # Sleep for 60 seconds, adjust as needed
 
