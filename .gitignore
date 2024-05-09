@@ -294,3 +294,4 @@ settings.py
 stuff/**
 exchangebot.db
 test*.py
+email.db

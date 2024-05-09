@@ -1,6 +1,7 @@
 import asyncio
 import logging
-from datetime import time
+import db
+from datetime import time, datetime
 
 from aiogram.utils.formatting import Text, Bold
 from aiogram import Bot, Dispatcher, F
@@ -52,31 +53,44 @@ async def start_telegram_bot(dp, bot):
 async def check_exchange_emails(account, bot):
     folder = account.inbox
     while True:  # Infinite loop
-        log.debug("Checking for new emails...")
+        TIMESTAMP = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        log.debug("Inbox processing...")
         for item in folder.filter(is_read=False):  # You may need to adjust the filter criteria
-            log.info(f"=======================================================================")
-            log.info(f"ID: {item.id}")
-            log.info(f"NEW EMAIL: Subject: {item.subject}")
-            log.debug(f"DEBUG:\n{item.subject}\n{item.text_body}")
-            # Forward the email to Telegram
-            # В некоторых письмах наряду с email отправителя передаётся его имя.
-            if item.sender.email_address == item.sender.name:
-                from_text = f"{item.sender.email_address}\n"
-            else:
-                from_text = f"{item.sender.email_address} [{item.sender.name}]\n"
-            content = Text(
-                Bold("From:\n"),
-                from_text,
-                Bold("Subject:\n"),
-                f"{item.subject}\n",
-                f"{'-' * 40}\n\n",
-                f"{item.text_body}"
-            )
-            log.debug(f"DEBUG: {content}")
-            await bot.send_message(chat_id=appset.telegram_chat_id,
-                                   **content.as_kwargs(), reply_markup=get_mail_keyboard("email_id"))
-            item.is_read = True  # Mark the email as read
-            item.save()
+            # Проверяем что такое письмо уже есть в БД
+            result = db.cursor.execute(f"SELECT * FROM email where email_id='{item.id}'")
+            if result:  # Если письмо уже есть в БД
+                db.execute_dml(f"update email set checked='{TIMESTAMP}' where email_id='{item.id}'")
+            else:  # Если письма нет в БД
+                log.info(f"=======================================================================")
+                log.info(f"ID: {item.id}")
+                log.info(f"NEW EMAIL: Subject: {item.subject}")
+                log.debug(f"DEBUG:\n{item.subject}\n{item.text_body}")
+                # Forward the email to Telegram
+                # В некоторых письмах наряду с email отправителя передаётся его имя.
+                if item.sender.email_address == item.sender.name:
+                    from_text = f"{item.sender.email_address}\n"
+                else:
+                    from_text = f"{item.sender.email_address} [{item.sender.name}]\n"
+                content = Text(
+                    Bold("From:\n"),
+                    from_text,
+                    Bold("Subject:\n"),
+                    f"{item.subject}\n",
+                    f"{'-' * 40}\n\n",
+                    f"{item.text_body}"
+                )
+                log.debug(f"DEBUG: {content}")
+
+                # item.is_read = True  # Mark the email as read
+                # item.save()
+                result = execute_insert(
+                    f"INSERT INTO email (email_id, created, checked) "
+                    f"VALUES ('{item.id}', '{TIMESTAMP}', '{TIMESTAMP}' RETURNING id")
+                if result:
+                    await bot.send_message(chat_id=appset.telegram_chat_id, **content.as_kwargs(),
+                                           reply_markup=get_mail_keyboard(f"id={str(result[0])}"))
+        # Письма которые удалены из inbox нужно удалить из БД
+        db.execute_dml(f"delete from email where checked != '{TIMESTAMP}'")
         # Sleep for a short interval to avoid continuous checking
         await asyncio.sleep(60)  # Sleep for 60 seconds, adjust as needed
 
