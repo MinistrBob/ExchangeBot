@@ -1,6 +1,7 @@
 CREATE TABLE email (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email_id VARCHAR(255),
+    telegram_id VARCHAR(255),
 	created datetime,
 	checked datetime
 );

@@ -10,6 +10,7 @@ from exchangelib import Credentials, Account, DELEGATE, Configuration, NTLM
 from telebot.utils.commands import set_commands
 from aiogram.filters import Command
 from telebot.handlers.callbacks import delete_email
+from telebot.handlers.main_handlers import ping
 from telebot.keyboards.inline_keyboards import get_mail_keyboard
 from settings import app_settings as appset
 from telebot.utils.callbackdata import EmailCallbackData
@@ -45,7 +46,7 @@ log.info("The application is running")
 
 
 async def start_bot(bot: Bot):
-    # await set_commands(bot)
+    await set_commands(bot)
     await bot.send_message(appset.telegram_chat_id, 'Bot started!')
 
 
@@ -66,7 +67,7 @@ async def check_exchange_emails(account, bot):
         try:
             TIMESTAMP = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             items = folder.all()
-            log.debug(f"Inbox processing {items.count()} emails")
+            log.debug(f"Inbox processing {items.count()} emails\n")
             for item in items:  # You may need to adjust the filter criteria
                 # Проверяем что такое письмо уже есть в БД
                 result = db.execute_select(f"SELECT * FROM email where email_id='{item.id}'")
@@ -84,9 +85,10 @@ async def check_exchange_emails(account, bot):
                         from_text = f"{item.sender.email_address} [{item.sender.name}]\n"
                     length = len(item.text_body)
                     log.info(f"LENGTH: {length}")
-                    # Сообщения длиннее 9500 не проходят
-                    if length > 9499:
-                        text = item.text_body[0:9499]
+                    # Сообщения длиннее 4096 для Markdown не проходят
+                    if length > 4096:
+                        index = 4095 - len(from_text) - len(item.subject) - 45
+                        text = item.text_body[0:index]
                     else:
                         text = item.text_body
                     content = Text(
@@ -97,12 +99,14 @@ async def check_exchange_emails(account, bot):
                         f"{'-' * 40}\n\n",
                         f"{text}"
                     )
+                    log.debug(f"LENGTH: {len(content)}")
                     result = db.execute_insert(
                         f"INSERT INTO email (email_id, created) "
                         f"VALUES ('{item.id}', '{TIMESTAMP}') RETURNING id")
                     if result:
-                        await bot.send_message(chat_id=appset.telegram_chat_id, **content.as_kwargs(),
-                                               reply_markup=get_mail_keyboard(f"id={str(result[0])}"))
+                        msg = await bot.send_message(chat_id=appset.telegram_chat_id, **content.as_kwargs(),
+                                                     reply_markup=get_mail_keyboard(f"id={str(result[0])}"))
+                        db.execute_dml(f"update email set telegram_id='{msg.message_id}' where id='{str(result[0])}'")
                 # Только после отправки сообщения нужно делать update checked
                 db.execute_dml(f"update email set checked='{TIMESTAMP}' where email_id='{item.id}'")
             # Письма которые удалены из inbox нужно удалить из БД
