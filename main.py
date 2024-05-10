@@ -107,8 +107,8 @@ async def check_exchange_emails(account, bot):
             # Письма которые удалены из inbox нужно удалить из БД
             db.execute_dml(f"delete from email where checked != '{TIMESTAMP}'")
         # Любая ошибка пересылается админу.
-        except Exception:
-            await bot.send_message(appset.telegram_chat_id, f'ERROR:\n{traceback.format_exc()}')
+        except Exception as e:
+            await bot.send_message(appset.telegram_chat_id, f'ERROR:{e}\n{traceback.format_exc()}')
         # Sleep for a short interval to avoid continuous checking
         await asyncio.sleep(60)  # Sleep for 60 seconds, adjust as needed
 
