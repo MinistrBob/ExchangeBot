@@ -8,6 +8,7 @@ from aiogram.utils.formatting import Text, Bold
 from aiogram import Bot, Dispatcher, F
 from exchangelib import Credentials, Account, DELEGATE, Configuration, NTLM
 from telebot.utils.commands import set_commands
+from aiogram.filters import Command
 from telebot.handlers.callbacks import delete_email
 from telebot.keyboards.inline_keyboards import get_mail_keyboard
 from settings import app_settings as appset
@@ -129,6 +130,7 @@ async def main():
     dp = Dispatcher()
     dp.startup.register(start_bot)
     dp.shutdown.register(stop_bot)
+    dp.message.register(ping, Command(commands=['ping']))
     dp.callback_query.register(delete_email, EmailCallbackData.filter(F.action == 'delete'))
     dp['account'] = account
 
