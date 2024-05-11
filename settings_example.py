@@ -46,7 +46,7 @@ default_settings = dict(
 
 if PROFILE == 'DEV':
     profile_settings = dict(
-        log_to_file=False,
+        log_to_file=True,
     )
 
 if PROFILE == 'PROD':
