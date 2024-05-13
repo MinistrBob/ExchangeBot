@@ -17,3 +17,4 @@ __pycache__/
 settings_example.py
 venv/
 test*.py
+output/**

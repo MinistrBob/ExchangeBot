@@ -3,6 +3,9 @@ from typing import Dict, List, Tuple, Any
 
 import sqlite3
 
+main_path = os.path.dirname(os.path.abspath(__file__))
+print("Path to main.py:", main_path)
+
 conn = sqlite3.connect("email.db")
 
 cursor = conn.cursor()
@@ -66,7 +69,7 @@ def get_cursor():
 
 def _init_db():
     """Инициализирует БД"""
-    with open("createdb.sql", "r") as f:
+    with open(os.path.join(main_path, "createdb.sql"), "r") as f:
         sql = f.read()
     cursor.executescript(sql)
     conn.commit()
@@ -80,6 +83,8 @@ def check_db_exists():
     if table_exists:
         return
     print("Initializing database...")
+    main_path = os.path.dirname(os.path.abspath(__file__))
+    print("Path to main.py:", main_path)
     _init_db()
 
 

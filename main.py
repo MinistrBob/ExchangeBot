@@ -15,7 +15,6 @@ from telebot.keyboards.inline_keyboards import get_mail_keyboard
 from settings import app_settings as appset
 from telebot.utils.callbackdata import EmailCallbackData
 
-
 # Settings
 print("Starting to set up the application...")
 if appset.DEBUG:
